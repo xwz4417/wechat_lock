@@ -24,13 +24,12 @@ last_activity_time = time.time()
 # 根据菜单点击，更改对应的间隔时间
 def set_limit(icon, item):
     global TIME_LIMIT
-    match item.text:
-        case "3分钟":
-            TIME_LIMIT = 3 * 60
-        case "5分钟":
-            TIME_LIMIT = 5 * 60
-        case "10分钟":
-            TIME_LIMIT = 10 * 60
+    if item.text == "3分钟":
+        TIME_LIMIT = 3 * 60
+    elif item.text == "5分钟":
+        TIME_LIMIT = 5 * 60
+    elif item.text == "10分钟":
+        TIME_LIMIT = 10 * 60
 
     print(f"Global TIME_LIMIT set to: {TIME_LIMIT} s")
     writ_config(TIME_LIMIT)
@@ -100,8 +99,8 @@ def on_press(key):
     last_activity_time = time.time()  # 键盘按键时更新活动时间
 
 
-def get_wechat_install_path_from_registry():
-    # 获取微信安装路径
+def get_wechat_install_path_from_registry_3():
+    # 获取微信安装路径(3.9）
     try:
         # 打开注册表项
         key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Tencent\WeChat")
@@ -113,6 +112,24 @@ def get_wechat_install_path_from_registry():
     except FileNotFoundError:
         print("未找到微信安装路径")
         return None
+
+
+def get_wechat_install_path_from_registry_4():
+    # 兼容微信4.0
+    try:
+        # 打开注册表项
+        with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, r"weixin\shell\open\command", 0, winreg.KEY_READ) as key:
+            # 读取默认值（空字符串表示默认值）
+            value, reg_type = winreg.QueryValueEx(key, "")
+            exe_index = value.find(".exe") + 4
+            exe_path = value[:exe_index]
+            print(f"完整的注册表项值: {value}")
+            print(f"提取的可执行文件路径: {exe_path}")
+            return exe_path
+    except FileNotFoundError:
+        print("指定的注册表项不存在。")
+    except Exception as e:
+        print(f"读取注册表项时出错: {e}")
 
 
 def is_locked():
@@ -130,11 +147,23 @@ def check_inactivity():
         if current_time - last_activity_time > TIME_LIMIT:
             print(f"超过{TIME_LIMIT / 60}分钟没有操作...")
             # 打开微信
-            subprocess.run(get_wechat_install_path_from_registry())
+            try:
+                subprocess.run(get_wechat_install_path_from_registry_3())
+            except Exception:
+                subprocess.Popen(get_wechat_install_path_from_registry_4())
+                with keyboard_controller.pressed(Key.ctrl, Key.alt):
+                    keyboard_controller.press('w')
+                    keyboard_controller.release('w')
+
             # 模拟按下 Ctrl + L,锁定微信
             with keyboard_controller.pressed(Key.ctrl):
                 keyboard_controller.press('l')
                 keyboard_controller.release('l')
+            # 隐藏窗口
+            # 获取当前活动窗口句柄
+
+            hwnd = ctypes.windll.user32.GetForegroundWindow()
+            ctypes.windll.user32.ShowWindow(hwnd, 6)  # 6 最小化，0 完全隐藏（慎用）
             run_status = False
             break
 
