@@ -110,7 +110,7 @@ def get_wechat_install_path_from_registry_3():
         wechat_path = os.path.join(install_path, "WeChat.exe")
         return wechat_path
     except FileNotFoundError:
-        print("未找到微信安装路径")
+        print("未找到微信安装路径,尝试读取微信4.0版本地址")
         return None
 
 
@@ -148,22 +148,23 @@ def check_inactivity():
             print(f"超过{TIME_LIMIT / 60}分钟没有操作...")
             # 打开微信
             try:
-                subprocess.run(get_wechat_install_path_from_registry_3())
+                install_path = get_wechat_install_path_from_registry_3()
+                subprocess.run(install_path)
             except Exception:
                 subprocess.Popen(get_wechat_install_path_from_registry_4())
                 with keyboard_controller.pressed(Key.ctrl, Key.alt):
                     keyboard_controller.press('w')
                     keyboard_controller.release('w')
+                    time.sleep(0.1)
 
             # 模拟按下 Ctrl + L,锁定微信
             with keyboard_controller.pressed(Key.ctrl):
                 keyboard_controller.press('l')
-                keyboard_controller.release('l')
             # 隐藏窗口
             # 获取当前活动窗口句柄
-
-            hwnd = ctypes.windll.user32.GetForegroundWindow()
-            ctypes.windll.user32.ShowWindow(hwnd, 6)  # 6 最小化，0 完全隐藏（慎用）
+            # time.sleep(1)
+            # hwnd = ctypes.windll.user32.GetForegroundWindow()
+            # ctypes.windll.user32.ShowWindow(hwnd, 6)  # 6 最小化，0 完全隐藏（慎用）
             run_status = False
             break
 
